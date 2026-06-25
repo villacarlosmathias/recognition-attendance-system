@@ -12,7 +12,34 @@ Future<void> main() async {
 
   final handler = Pipeline()
       .addMiddleware(logRequests())
-      .addMiddleware(corsHeaders())
+      .addMiddleware((Handler innerHandler) {
+        return (Request request) async {
+          if (request.method == 'OPTIONS') {
+            return Response.ok(
+              '',
+              headers: {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods':
+                    'GET, POST, PUT, DELETE, OPTIONS',
+                'Access-Control-Allow-Headers':
+                    'Origin, Content-Type, Accept, Authorization',
+              },
+            );
+          }
+
+          final response = await innerHandler(request);
+
+          return response.change(
+            headers: {
+              ...response.headers,
+              'Access-Control-Allow-Origin': '*',
+              'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+              'Access-Control-Allow-Headers':
+                  'Origin, Content-Type, Accept, Authorization',
+            },
+          );
+        };
+      })
       .addHandler((Request request) async {
         final path = request.url.path;
         final method = request.method;
