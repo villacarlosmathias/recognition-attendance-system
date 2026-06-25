@@ -346,4 +346,3 @@ class _SuccessCard extends StatelessWidget {
     );
   }
 }
-1
