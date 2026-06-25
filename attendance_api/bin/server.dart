@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:postgres/postgres.dart';
 import 'package:shelf/shelf.dart';
@@ -6,16 +7,36 @@ import 'package:shelf/shelf_io.dart' as shelf_io;
 import 'package:shelf_cors_headers/shelf_cors_headers.dart';
 
 Future<void> main() async {
-  final connection = await Connection.open(
-    Endpoint(
-      host: 'localhost',
-      port: 5432,
-      database: 'attendance_db',
-      username: 'postgres',
-      password: 'Postgre123!',
-    ),
-    settings: const ConnectionSettings(sslMode: SslMode.disable),
-  );
+  final databaseUrl = Platform.environment['DATABASE_URL'];
+
+  late final Connection connection;
+
+  if (databaseUrl != null && databaseUrl.isNotEmpty) {
+    final uri = Uri.parse(databaseUrl);
+    final userInfo = uri.userInfo.split(':');
+
+    connection = await Connection.open(
+      Endpoint(
+        host: uri.host,
+        port: uri.hasPort ? uri.port : 5432,
+        database: uri.pathSegments.isNotEmpty ? uri.pathSegments.first : '',
+        username: userInfo.isNotEmpty ? userInfo[0] : '',
+        password: userInfo.length > 1 ? userInfo[1] : '',
+      ),
+      settings: const ConnectionSettings(sslMode: SslMode.require),
+    );
+  } else {
+    connection = await Connection.open(
+      Endpoint(
+        host: 'localhost',
+        port: 5432,
+        database: 'attendance_db',
+        username: 'postgres',
+        password: 'Postgre123!',
+      ),
+      settings: const ConnectionSettings(sslMode: SslMode.disable),
+    );
+  }
 
   final handler = Pipeline()
       .addMiddleware(logRequests())
@@ -23,6 +44,10 @@ Future<void> main() async {
       .addHandler((Request request) async {
         final path = request.url.path;
         final method = request.method;
+
+        if (method == 'GET' && path == 'health') {
+          return jsonResponse({'status': 'ok'});
+        }
 
         if (method == 'GET' && path == 'attendees') {
           return getAttendees(connection);
@@ -36,7 +61,7 @@ Future<void> main() async {
         if (method == 'POST' && path == 'student/register') {
           final body = await request.readAsString();
           final data = jsonDecode(body) as Map<String, dynamic>;
-          final studentNo = data['student_no'].toString();
+          final studentNo = data['student_no'].toString().trim();
 
           return registerStudent(connection, studentNo);
         }
@@ -49,32 +74,39 @@ Future<void> main() async {
           return checkIn(connection, attendeeId);
         }
 
-        return Response.notFound(
-          jsonEncode({'message': 'Route not found'}),
-          headers: {'Content-Type': 'application/json'},
-        );
+        return jsonResponse({'message': 'Route not found'}, statusCode: 404);
       });
 
-  final server = await shelf_io.serve(handler, '0.0.0.0', 8080);
+  final port = int.tryParse(Platform.environment['PORT'] ?? '8080') ?? 8080;
+  final server = await shelf_io.serve(handler, '0.0.0.0', port);
 
   print('Server running at http://${server.address.host}:${server.port}');
 }
 
+Response jsonResponse(Map<String, dynamic> data, {int statusCode = 200}) {
+  return Response(
+    statusCode,
+    body: jsonEncode(data),
+    headers: {'Content-Type': 'application/json'},
+  );
+}
+
 Future<Response> getAttendees(Connection connection) async {
   final result = await connection.execute('''
-    SELECT id, event_id, seat_no, full_name, status, created_at
+    SELECT id, event_id, student_no, seat_no, full_name, status, created_at
     FROM attendees
     ORDER BY seat_no ASC
-    ''');
+  ''');
 
   final attendees = result.map((row) {
     return {
       'id': row[0],
       'event_id': row[1],
-      'seat_no': row[2],
-      'full_name': row[3],
-      'status': row[4],
-      'created_at': row[5].toString(),
+      'student_no': row[2],
+      'seat_no': row[3],
+      'full_name': row[4],
+      'status': row[5],
+      'created_at': row[6].toString(),
     };
   }).toList();
 
@@ -87,9 +119,9 @@ Future<Response> getAttendees(Connection connection) async {
 Future<Response> searchAttendees(Connection connection, String name) async {
   final result = await connection.execute(
     Sql.named('''
-      SELECT id, event_id, seat_no, full_name, status, created_at
+      SELECT id, event_id, student_no, seat_no, full_name, status, created_at
       FROM attendees
-      WHERE full_name ILIKE @name
+      WHERE full_name ILIKE @name OR student_no ILIKE @name
       ORDER BY seat_no ASC
     '''),
     parameters: {'name': '%$name%'},
@@ -99,10 +131,11 @@ Future<Response> searchAttendees(Connection connection, String name) async {
     return {
       'id': row[0],
       'event_id': row[1],
-      'seat_no': row[2],
-      'full_name': row[3],
-      'status': row[4],
-      'created_at': row[5].toString(),
+      'student_no': row[2],
+      'seat_no': row[3],
+      'full_name': row[4],
+      'status': row[5],
+      'created_at': row[6].toString(),
     };
   }).toList();
 
@@ -112,73 +145,16 @@ Future<Response> searchAttendees(Connection connection, String name) async {
   );
 }
 
-Future<Response> checkIn(Connection connection, int attendeeId) async {
-  final attendeeResult = await connection.execute(
-    Sql.named('''
-      SELECT id, seat_no, full_name, status
-      FROM attendees
-      WHERE id = @id
-      LIMIT 1
-    '''),
-    parameters: {'id': attendeeId},
-  );
-
-  if (attendeeResult.isEmpty) {
-    return Response.notFound(
-      jsonEncode({'message': 'Attendee not found'}),
-      headers: {'Content-Type': 'application/json'},
-    );
-  }
-
-  final attendee = attendeeResult.first;
-  final status = attendee[3].toString();
-
-  if (status == 'Checked In') {
-    return Response.ok(
-      jsonEncode({
-        'message': 'Already checked in',
-        'id': attendee[0],
-        'seat_no': attendee[1],
-        'full_name': attendee[2],
-        'status': attendee[3],
-      }),
-      headers: {'Content-Type': 'application/json'},
-    );
-  }
-
-  await connection.execute(
-    Sql.named('''
-      INSERT INTO attendance_logs (attendee_id)
-      VALUES (@attendee_id)
-    '''),
-    parameters: {'attendee_id': attendeeId},
-  );
-
-  await connection.execute(
-    Sql.named('''
-      UPDATE attendees
-      SET status = 'Checked In'
-      WHERE id = @id
-    '''),
-    parameters: {'id': attendeeId},
-  );
-
-  return Response.ok(
-    jsonEncode({
-      'message': 'Attendance recorded',
-      'id': attendee[0],
-      'seat_no': attendee[1],
-      'full_name': attendee[2],
-      'status': 'Checked In',
-    }),
-    headers: {'Content-Type': 'application/json'},
-  );
-}
-
 Future<Response> registerStudent(
   Connection connection,
   String studentNo,
 ) async {
+  if (studentNo.isEmpty) {
+    return jsonResponse({
+      'message': 'Student number is required',
+    }, statusCode: 400);
+  }
+
   final result = await connection.execute(
     Sql.named('''
       SELECT id, student_no, seat_no, full_name, status
@@ -190,10 +166,9 @@ Future<Response> registerStudent(
   );
 
   if (result.isEmpty) {
-    return Response.notFound(
-      jsonEncode({'message': 'Student number not found'}),
-      headers: {'Content-Type': 'application/json'},
-    );
+    return jsonResponse({
+      'message': 'Student number not found',
+    }, statusCode: 404);
   }
 
   final attendee = result.first;
@@ -219,16 +194,67 @@ Future<Response> registerStudent(
     );
   }
 
-  return Response.ok(
-    jsonEncode({
-      'message': status == 'Checked In'
-          ? 'Already registered'
-          : 'Registration successful',
-      'student_no': attendee[1],
-      'seat_no': attendee[2],
-      'full_name': attendee[3],
-      'status': 'Checked In',
-    }),
-    headers: {'Content-Type': 'application/json'},
+  return jsonResponse({
+    'message': status == 'Checked In'
+        ? 'Already registered'
+        : 'Registration successful',
+    'student_no': attendee[1],
+    'seat_no': attendee[2],
+    'full_name': attendee[3],
+    'status': 'Checked In',
+  });
+}
+
+Future<Response> checkIn(Connection connection, int attendeeId) async {
+  final attendeeResult = await connection.execute(
+    Sql.named('''
+      SELECT id, seat_no, full_name, status
+      FROM attendees
+      WHERE id = @id
+      LIMIT 1
+    '''),
+    parameters: {'id': attendeeId},
   );
+
+  if (attendeeResult.isEmpty) {
+    return jsonResponse({'message': 'Attendee not found'}, statusCode: 404);
+  }
+
+  final attendee = attendeeResult.first;
+  final status = attendee[3].toString();
+
+  if (status == 'Checked In') {
+    return jsonResponse({
+      'message': 'Already checked in',
+      'id': attendee[0],
+      'seat_no': attendee[1],
+      'full_name': attendee[2],
+      'status': attendee[3],
+    });
+  }
+
+  await connection.execute(
+    Sql.named('''
+      INSERT INTO attendance_logs (attendee_id)
+      VALUES (@attendee_id)
+    '''),
+    parameters: {'attendee_id': attendeeId},
+  );
+
+  await connection.execute(
+    Sql.named('''
+      UPDATE attendees
+      SET status = 'Checked In'
+      WHERE id = @id
+    '''),
+    parameters: {'id': attendeeId},
+  );
+
+  return jsonResponse({
+    'message': 'Attendance recorded',
+    'id': attendee[0],
+    'seat_no': attendee[1],
+    'full_name': attendee[2],
+    'status': 'Checked In',
+  });
 }
