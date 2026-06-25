@@ -192,6 +192,21 @@ Future<void> ensureDatabaseSchema(Connection connection) async {
       checked_in_at TIMESTAMP DEFAULT NOW()
     );
   ''');
+
+  await connection.execute('''
+  ALTER TABLE attendance_logs
+  ADD COLUMN IF NOT EXISTS event_id INT REFERENCES events(id) ON DELETE CASCADE;
+  ''');
+
+  await connection.execute('''
+  ALTER TABLE attendance_logs
+  ADD COLUMN IF NOT EXISTS attendee_id INT REFERENCES attendees(id) ON DELETE CASCADE;
+  ''');
+
+  await connection.execute('''
+  ALTER TABLE attendance_logs
+  ADD COLUMN IF NOT EXISTS checked_in_at TIMESTAMP DEFAULT NOW();
+  ''');
 }
 
 Response jsonResponse(dynamic data, {int statusCode = 200}) {
