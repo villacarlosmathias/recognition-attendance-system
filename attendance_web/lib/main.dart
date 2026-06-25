@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
+import 'package:qr_flutter/qr_flutter.dart';
 
 void main() {
   runApp(const EventAttendanceApp());
@@ -549,6 +550,49 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
             ],
           ),
           const SizedBox(height: 20),
+
+          Center(
+            child: Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(22),
+                side: const BorderSide(color: Color(0xFFE2E8F0)),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(22),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Attendance QR Code',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    QrImageView(
+                      data:
+                          'https://recognition-attendance-system.onrender.com/?eventId=${event['id']}',
+                      version: QrVersions.auto,
+                      size: 220,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Event ID: ${event['id']}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF2563EB),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
           Expanded(
             child: loading
                 ? const Center(child: CircularProgressIndicator())
@@ -665,7 +709,7 @@ class StudentRegistrationPage extends StatefulWidget {
 
 class _StudentRegistrationPageState extends State<StudentRegistrationPage> {
   final api = ApiService();
-  final eventIdController = TextEditingController(text: '1');
+  late final TextEditingController eventIdController;
   final studentNoController = TextEditingController();
 
   bool loading = false;
