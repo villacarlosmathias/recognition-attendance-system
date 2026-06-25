@@ -98,6 +98,14 @@ class _AdminShellState extends State<AdminShell> {
   late int selectedIndex;
   Map<String, dynamic>? selectedEvent;
 
+  @override
+  void initState() {
+    super.initState();
+
+    final hasEventId = Uri.base.queryParameters.containsKey('eventId');
+    selectedIndex = hasEventId ? 3 : 0;
+  }
+
   void openEvent(Map<String, dynamic> event) {
     setState(() {
       selectedEvent = event;
@@ -113,14 +121,6 @@ class _AdminShellState extends State<AdminShell> {
       EventDetailsPage(event: selectedEvent),
       const StudentRegistrationPage(),
     ];
-
-    @override
-    void initState() {
-      super.initState();
-
-      final hasEventId = Uri.base.queryParameters.containsKey('eventId');
-      selectedIndex = hasEventId ? 3 : 0;
-    }
 
     final isMobile = MediaQuery.of(context).size.width < 700;
 
