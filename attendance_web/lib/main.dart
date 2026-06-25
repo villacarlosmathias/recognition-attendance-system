@@ -95,7 +95,7 @@ class AdminShell extends StatefulWidget {
 }
 
 class _AdminShellState extends State<AdminShell> {
-  int selectedIndex = 0;
+  late int selectedIndex;
   Map<String, dynamic>? selectedEvent;
 
   void openEvent(Map<String, dynamic> event) {
@@ -114,63 +114,75 @@ class _AdminShellState extends State<AdminShell> {
       const StudentRegistrationPage(),
     ];
 
+    @override
+    void initState() {
+      super.initState();
+
+      final hasEventId = Uri.base.queryParameters.containsKey('eventId');
+      selectedIndex = hasEventId ? 3 : 0;
+    }
+
+    final isMobile = MediaQuery.of(context).size.width < 700;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-      body: Row(
-        children: [
-          Container(
-            width: 270,
-            color: const Color(0xFF0F172A),
-            child: SafeArea(
-              child: Column(
-                children: [
-                  const SizedBox(height: 24),
-                  const Icon(
-                    Icons.event_available,
-                    color: Colors.white,
-                    size: 48,
-                  ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Smart Attendance',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
+      body: isMobile
+          ? pages[selectedIndex]
+          : Row(
+              children: [
+                Container(
+                  width: 270,
+                  color: const Color(0xFF0F172A),
+                  child: SafeArea(
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 24),
+                        const Icon(
+                          Icons.event_available,
+                          color: Colors.white,
+                          size: 48,
+                        ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Smart Attendance',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 30),
+                        _NavTile(
+                          icon: Icons.dashboard,
+                          label: 'Dashboard',
+                          selected: selectedIndex == 0,
+                          onTap: () => setState(() => selectedIndex = 0),
+                        ),
+                        _NavTile(
+                          icon: Icons.event,
+                          label: 'Events',
+                          selected: selectedIndex == 1,
+                          onTap: () => setState(() => selectedIndex = 1),
+                        ),
+                        _NavTile(
+                          icon: Icons.people,
+                          label: 'Event Details',
+                          selected: selectedIndex == 2,
+                          onTap: () => setState(() => selectedIndex = 2),
+                        ),
+                        _NavTile(
+                          icon: Icons.qr_code,
+                          label: 'Student Registration',
+                          selected: selectedIndex == 3,
+                          onTap: () => setState(() => selectedIndex = 3),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 30),
-                  _NavTile(
-                    icon: Icons.dashboard,
-                    label: 'Dashboard',
-                    selected: selectedIndex == 0,
-                    onTap: () => setState(() => selectedIndex = 0),
-                  ),
-                  _NavTile(
-                    icon: Icons.event,
-                    label: 'Events',
-                    selected: selectedIndex == 1,
-                    onTap: () => setState(() => selectedIndex = 1),
-                  ),
-                  _NavTile(
-                    icon: Icons.people,
-                    label: 'Event Details',
-                    selected: selectedIndex == 2,
-                    onTap: () => setState(() => selectedIndex = 2),
-                  ),
-                  _NavTile(
-                    icon: Icons.qr_code,
-                    label: 'Student Registration',
-                    selected: selectedIndex == 3,
-                    onTap: () => setState(() => selectedIndex = 3),
-                  ),
-                ],
-              ),
+                ),
+                Expanded(child: pages[selectedIndex]),
+              ],
             ),
-          ),
-          Expanded(child: pages[selectedIndex]),
-        ],
-      ),
     );
   }
 }
