@@ -1,0 +1,13 @@
+# Flutter
+**/build/
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.packages
+
+# IDE
+.vscode/
+.idea/
+
+# macOS
+.DS_Store
