@@ -7,36 +7,7 @@ import 'package:shelf/shelf_io.dart' as shelf_io;
 import 'package:shelf_cors_headers/shelf_cors_headers.dart';
 
 Future<void> main() async {
-  final databaseUrl = Platform.environment['DATABASE_URL'];
-
-  late final Connection connection;
-
-  if (databaseUrl != null && databaseUrl.isNotEmpty) {
-    final uri = Uri.parse(databaseUrl);
-    final userInfo = uri.userInfo.split(':');
-
-    connection = await Connection.open(
-      Endpoint(
-        host: uri.host,
-        port: uri.hasPort ? uri.port : 5432,
-        database: uri.pathSegments.isNotEmpty ? uri.pathSegments.first : '',
-        username: userInfo.isNotEmpty ? userInfo[0] : '',
-        password: userInfo.length > 1 ? userInfo[1] : '',
-      ),
-      settings: const ConnectionSettings(sslMode: SslMode.require),
-    );
-  } else {
-    connection = await Connection.open(
-      Endpoint(
-        host: 'localhost',
-        port: 5432,
-        database: 'attendance_db',
-        username: 'postgres',
-        password: 'Postgre123!',
-      ),
-      settings: const ConnectionSettings(sslMode: SslMode.disable),
-    );
-  }
+  final connection = await openDatabaseConnection();
 
   final handler = Pipeline()
       .addMiddleware(logRequests())
@@ -81,6 +52,42 @@ Future<void> main() async {
   final server = await shelf_io.serve(handler, '0.0.0.0', port);
 
   print('Server running at http://${server.address.host}:${server.port}');
+}
+
+Future<Connection> openDatabaseConnection() async {
+  final databaseUrl = Platform.environment['DATABASE_URL'];
+  final isRender = Platform.environment['RENDER'] == 'true';
+
+  if (databaseUrl != null && databaseUrl.isNotEmpty) {
+    final uri = Uri.parse(databaseUrl);
+    final userInfo = uri.userInfo.split(':');
+
+    return Connection.open(
+      Endpoint(
+        host: uri.host,
+        port: uri.hasPort ? uri.port : 5432,
+        database: uri.pathSegments.isNotEmpty ? uri.pathSegments.first : '',
+        username: userInfo.isNotEmpty ? userInfo[0] : '',
+        password: userInfo.length > 1 ? userInfo[1] : '',
+      ),
+      settings: const ConnectionSettings(sslMode: SslMode.require),
+    );
+  }
+
+  if (isRender) {
+    throw Exception('DATABASE_URL is missing in Render Environment Variables.');
+  }
+
+  return Connection.open(
+    Endpoint(
+      host: 'localhost',
+      port: 5432,
+      database: 'attendance_db',
+      username: 'postgres',
+      password: 'Postgre123!',
+    ),
+    settings: const ConnectionSettings(sslMode: SslMode.disable),
+  );
 }
 
 Response jsonResponse(Map<String, dynamic> data, {int statusCode = 200}) {
