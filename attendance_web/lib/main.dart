@@ -721,7 +721,9 @@ class StudentRegistrationPage extends StatefulWidget {
 
 class _StudentRegistrationPageState extends State<StudentRegistrationPage> {
   final api = ApiService();
-  late final TextEditingController eventIdController;
+  final eventIdController = TextEditingController(
+    text: Uri.base.queryParameters['eventId'] ?? '1',
+  );
   final studentNoController = TextEditingController();
 
   bool loading = false;
