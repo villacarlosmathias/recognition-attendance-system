@@ -37,7 +37,7 @@ class StudentRegistrationPage extends StatefulWidget {
 class _StudentRegistrationPageState extends State<StudentRegistrationPage> {
   final studentNoController = TextEditingController();
 
-  static const baseUrl = 'http://localhost:8080';
+  static const baseUrl = 'https://recognition-api-29xg.onrender.com';
 
   bool isLoading = false;
   String? errorMessage;
