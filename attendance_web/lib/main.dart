@@ -683,29 +683,34 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
     return _PageScaffold(
       title: event['event_name'] ?? 'Event',
       subtitle: '${event['venue'] ?? '-'} • ${event['event_date'] ?? '-'}',
-      action: Wrap(
-        spacing: 10,
-        runSpacing: 10,
-        children: [
-          ElevatedButton.icon(
-            onPressed: openAddStudent,
-            icon: const Icon(Icons.person_add),
-            label: const Text('Add Student'),
-          ),
-          ElevatedButton.icon(
-            onPressed: importExcel,
-            icon: const Icon(Icons.upload_file),
-            label: const Text('Import Excel'),
-          ),
-          ElevatedButton.icon(
-            onPressed: downloadReport,
-            icon: const Icon(Icons.download),
-            label: const Text('Download Report'),
-          ),
-        ],
-      ),
       child: Column(
         children: [
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: openAddStudent,
+                  icon: const Icon(Icons.person_add),
+                  label: const Text('Add Student'),
+                ),
+                ElevatedButton.icon(
+                  onPressed: importExcel,
+                  icon: const Icon(Icons.upload_file),
+                  label: const Text('Import Excel'),
+                ),
+                ElevatedButton.icon(
+                  onPressed: downloadReport,
+                  icon: const Icon(Icons.download),
+                  label: const Text('Download Report'),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
           Row(
             children: [
               _DashboardCard(
@@ -727,7 +732,9 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
               ),
             ],
           ),
+
           const SizedBox(height: 20),
+
           Center(
             child: Card(
               elevation: 0,
@@ -782,7 +789,9 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
               ),
             ),
           ),
+
           const SizedBox(height: 20),
+
           Expanded(
             child: loading
                 ? const Center(child: CircularProgressIndicator())
