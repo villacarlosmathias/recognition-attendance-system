@@ -14,6 +14,8 @@ class EventAttendanceApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasEventId = Uri.base.queryParameters.containsKey('eventId');
+
     return MaterialApp(
       title: 'Event Smart Attendance',
       debugShowCheckedModeBanner: false,
@@ -22,7 +24,7 @@ class EventAttendanceApp extends StatelessWidget {
         textTheme: GoogleFonts.interTextTheme(),
         colorSchemeSeed: const Color(0xFF2563EB),
       ),
-      home: const AdminShell(),
+      home: hasEventId ? const StudentRegistrationPage() : const AdminShell(),
     );
   }
 }
