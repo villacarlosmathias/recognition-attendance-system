@@ -675,13 +675,29 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
     return _PageScaffold(
       title: event['event_name'] ?? 'Event',
       subtitle: '${event['venue'] ?? '-'} • ${event['event_date'] ?? '-'}',
-      action: Row(
+      action: Wrap(
+        spacing: 10,
+        runSpacing: 10,
         children: [
           ElevatedButton.icon(
             onPressed: openAddStudent,
             icon: const Icon(Icons.person_add),
             label: const Text('Add Student'),
           ),
+
+          ElevatedButton.icon(
+            onPressed: importExcel,
+            icon: const Icon(Icons.upload_file),
+            label: const Text('Import Excel'),
+          ),
+
+          ElevatedButton.icon(
+            onPressed: downloadReport,
+            icon: const Icon(Icons.download),
+            label: const Text('Download Report'),
+          ),
+        ],
+      ),
           const SizedBox(width: 10),
           ElevatedButton.icon(
             onPressed: importExcel,
