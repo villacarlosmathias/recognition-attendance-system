@@ -4,6 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:qr_flutter/qr_flutter.dart';
+import 'dart:html' as html;
+import 'package:file_picker/file_picker.dart';
+import 'package:excel/excel.dart' as xls;
+import 'package:csv/csv.dart';
 
 void main() {
   runApp(const EventAttendanceApp());
@@ -67,6 +71,37 @@ class ApiService {
     );
     if (response.statusCode != 200) throw Exception(response.body);
     return jsonDecode(response.body) as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> importAttendees(
+    int eventId,
+    List<Map<String, dynamic>> attendees,
+  ) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/events/$eventId/import-attendees'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'attendees': attendees}),
+    );
+
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+
+    if (response.statusCode != 200) {
+      throw Exception(data['message'] ?? 'Import failed');
+    }
+
+    return data;
+  }
+
+  Future<List<dynamic>> getReport(int eventId) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/events/$eventId/report'),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception(response.body);
+    }
+
+    return jsonDecode(response.body) as List<dynamic>;
   }
 
   Future<Map<String, dynamic>> registerStudent(
@@ -479,17 +514,17 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
   List<dynamic> attendees = [];
 
   @override
+  void initState() {
+    super.initState();
+    loadAttendees();
+  }
+
+  @override
   void didUpdateWidget(covariant EventDetailsPage oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.event?['id'] != oldWidget.event?['id']) {
       loadAttendees();
     }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    loadAttendees();
   }
 
   Future<void> loadAttendees() async {
@@ -515,6 +550,108 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
     }
   }
 
+  Future<void> importExcel() async {
+    final event = widget.event;
+    if (event == null) return;
+
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['xlsx'],
+      withData: true,
+    );
+
+    if (result == null || result.files.single.bytes == null) return;
+
+    final bytes = result.files.single.bytes!;
+    final excel = xls.Excel.decodeBytes(bytes);
+    final sheet = excel.tables[excel.tables.keys.first];
+
+    if (sheet == null) return;
+
+    final importedAttendees = <Map<String, dynamic>>[];
+
+    for (int i = 1; i < sheet.rows.length; i++) {
+      final row = sheet.rows[i];
+
+      String cell(int index) {
+        if (index >= row.length) return '';
+        return row[index]?.value?.toString().trim() ?? '';
+      }
+
+      final seatNo = cell(0);
+      final studentId = cell(1);
+      final studentName = cell(2);
+      final collegeSchool = cell(3);
+      final program = cell(4);
+      final college = cell(5);
+
+      if (studentId.isEmpty || studentName.isEmpty) continue;
+
+      importedAttendees.add({
+        'seat_no': int.tryParse(seatNo),
+        'student_no': studentId,
+        'full_name': studentName,
+        'college_school': collegeSchool,
+        'program': program,
+        'college': college,
+      });
+    }
+
+    final response = await api.importAttendees(event['id'], importedAttendees);
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Imported ${response['imported']} attendees.')),
+    );
+
+    await loadAttendees();
+  }
+
+  Future<void> downloadReport() async {
+    final event = widget.event;
+    if (event == null) return;
+
+    final rows = await api.getReport(event['id']);
+
+    final csvRows = <List<dynamic>>[
+      [
+        'Seat No.',
+        'Student ID',
+        'Student Name',
+        'College/School',
+        'Program',
+        'College',
+        'Status',
+        'Checked In At',
+      ],
+    ];
+
+    for (final item in rows) {
+      csvRows.add([
+        item['seat_no'] ?? '',
+        item['student_no'] ?? '',
+        item['full_name'] ?? '',
+        item['college_school'] ?? '',
+        item['program'] ?? '',
+        item['college'] ?? '',
+        item['status'] ?? '',
+        item['checked_in_at'] ?? '',
+      ]);
+    }
+
+    final csv = const ListToCsvConverter().convert(csvRows);
+    final bytes = utf8.encode(csv);
+    final blob = html.Blob([bytes], 'text/csv');
+    final url = html.Url.createObjectUrlFromBlob(blob);
+
+    html.AnchorElement(href: url)
+      ..setAttribute('download', 'attendance_report_event_${event['id']}.csv')
+      ..click();
+
+    html.Url.revokeObjectUrl(url);
+  }
+
   @override
   Widget build(BuildContext context) {
     final event = widget.event;
@@ -538,10 +675,26 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
     return _PageScaffold(
       title: event['event_name'] ?? 'Event',
       subtitle: '${event['venue'] ?? '-'} • ${event['event_date'] ?? '-'}',
-      action: ElevatedButton.icon(
-        onPressed: openAddStudent,
-        icon: const Icon(Icons.person_add),
-        label: const Text('Add Student'),
+      action: Row(
+        children: [
+          ElevatedButton.icon(
+            onPressed: openAddStudent,
+            icon: const Icon(Icons.person_add),
+            label: const Text('Add Student'),
+          ),
+          const SizedBox(width: 10),
+          ElevatedButton.icon(
+            onPressed: importExcel,
+            icon: const Icon(Icons.upload_file),
+            label: const Text('Import Excel'),
+          ),
+          const SizedBox(width: 10),
+          ElevatedButton.icon(
+            onPressed: downloadReport,
+            icon: const Icon(Icons.download),
+            label: const Text('Download Report'),
+          ),
+        ],
       ),
       child: Column(
         children: [
@@ -567,7 +720,6 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
             ],
           ),
           const SizedBox(height: 20),
-
           Center(
             child: Card(
               elevation: 0,
@@ -622,9 +774,7 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
               ),
             ),
           ),
-
           const SizedBox(height: 20),
-
           Expanded(
             child: loading
                 ? const Center(child: CircularProgressIndicator())
