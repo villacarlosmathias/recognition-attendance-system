@@ -589,6 +589,10 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                       version: QrVersions.auto,
                       size: 220,
                     ),
+                    SelectableText(
+                      'https://recognition-attendance-system.onrender.com/?eventId=${event['id']}',
+                      textAlign: TextAlign.center,
+                    ),
                     const SizedBox(height: 12),
                     Text(
                       'Event ID: ${event['id']}',
