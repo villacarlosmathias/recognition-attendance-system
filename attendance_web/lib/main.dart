@@ -8,6 +8,7 @@ import 'dart:html' as html;
 import 'package:file_picker/file_picker.dart';
 import 'package:excel/excel.dart' as xls;
 import 'package:csv/csv.dart';
+import 'services/api_service.dart';
 
 void main() {
   runApp(const EventAttendanceApp());
@@ -29,197 +30,6 @@ class EventAttendanceApp extends StatelessWidget {
         colorSchemeSeed: const Color(0xFF2563EB),
       ),
       home: hasEventId ? const StudentRegistrationPage() : const AdminShell(),
-    );
-  }
-}
-
-class ApiService {
-  static const baseUrl = 'https://recognition-api-29xg.onrender.com';
-
-  Future<List<dynamic>> getEvents() async {
-    final response = await http.get(Uri.parse('$baseUrl/events'));
-    if (response.statusCode != 200) throw Exception(response.body);
-    return jsonDecode(response.body) as List<dynamic>;
-  }
-
-  Future<Map<String, dynamic>> createEvent(Map<String, dynamic> data) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/events'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(data),
-    );
-    if (response.statusCode != 200) throw Exception(response.body);
-    return jsonDecode(response.body) as Map<String, dynamic>;
-  }
-
-  Future<List<dynamic>> getAttendees(int eventId) async {
-    final response = await http.get(
-      Uri.parse('$baseUrl/events/$eventId/attendees'),
-    );
-    if (response.statusCode != 200) throw Exception(response.body);
-    return jsonDecode(response.body) as List<dynamic>;
-  }
-
-  Future<Map<String, dynamic>> addAttendee(
-    int eventId,
-    Map<String, dynamic> data,
-  ) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/events/$eventId/attendees'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(data),
-    );
-    if (response.statusCode != 200) throw Exception(response.body);
-    return jsonDecode(response.body) as Map<String, dynamic>;
-  }
-
-  Future<Map<String, dynamic>> importAttendees(
-    int eventId,
-    List<Map<String, dynamic>> attendees,
-  ) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/events/$eventId/import-attendees'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'attendees': attendees}),
-    );
-
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
-
-    if (response.statusCode != 200) {
-      throw Exception(data['message'] ?? 'Import failed');
-    }
-
-    return data;
-  }
-
-  Future<List<dynamic>> getReport(int eventId) async {
-    final response = await http.get(
-      Uri.parse('$baseUrl/events/$eventId/report'),
-    );
-
-    if (response.statusCode != 200) {
-      throw Exception(response.body);
-    }
-
-    return jsonDecode(response.body) as List<dynamic>;
-  }
-
-  Future<Map<String, dynamic>> registerStudent(
-    int eventId,
-    String studentNo,
-  ) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/events/$eventId/register'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'student_no': studentNo}),
-    );
-
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
-
-    if (response.statusCode != 200) {
-      throw Exception(data['message'] ?? 'Registration failed');
-    }
-
-    return data;
-  }
-}
-
-class AdminShell extends StatefulWidget {
-  const AdminShell({super.key});
-
-  @override
-  State<AdminShell> createState() => _AdminShellState();
-}
-
-class _AdminShellState extends State<AdminShell> {
-  late int selectedIndex;
-  Map<String, dynamic>? selectedEvent;
-
-  @override
-  void initState() {
-    super.initState();
-
-    final hasEventId = Uri.base.queryParameters.containsKey('eventId');
-    selectedIndex = hasEventId ? 3 : 0;
-  }
-
-  void openEvent(Map<String, dynamic> event) {
-    setState(() {
-      selectedEvent = event;
-      selectedIndex = 2;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final pages = [
-      DashboardPage(onOpenEvents: () => setState(() => selectedIndex = 1)),
-      EventsPage(onOpenEvent: openEvent),
-      EventDetailsPage(event: selectedEvent),
-      const StudentRegistrationPage(),
-    ];
-
-    final isMobile = MediaQuery.of(context).size.width < 700;
-
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      body: isMobile
-          ? pages[selectedIndex]
-          : Row(
-              children: [
-                Container(
-                  width: 270,
-                  color: const Color(0xFF0F172A),
-                  child: SafeArea(
-                    child: Column(
-                      children: [
-                        const SizedBox(height: 24),
-                        const Icon(
-                          Icons.event_available,
-                          color: Colors.white,
-                          size: 48,
-                        ),
-                        const SizedBox(height: 12),
-                        const Text(
-                          'Smart Attendance',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 22,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        const SizedBox(height: 30),
-                        _NavTile(
-                          icon: Icons.dashboard,
-                          label: 'Dashboard',
-                          selected: selectedIndex == 0,
-                          onTap: () => setState(() => selectedIndex = 0),
-                        ),
-                        _NavTile(
-                          icon: Icons.event,
-                          label: 'Events',
-                          selected: selectedIndex == 1,
-                          onTap: () => setState(() => selectedIndex = 1),
-                        ),
-                        _NavTile(
-                          icon: Icons.people,
-                          label: 'Event Details',
-                          selected: selectedIndex == 2,
-                          onTap: () => setState(() => selectedIndex = 2),
-                        ),
-                        _NavTile(
-                          icon: Icons.qr_code,
-                          label: 'Student Registration',
-                          selected: selectedIndex == 3,
-                          onTap: () => setState(() => selectedIndex = 3),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                Expanded(child: pages[selectedIndex]),
-              ],
-            ),
     );
   }
 }
@@ -605,59 +415,78 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
       return;
     }
 
-    final response = await api.importAttendees(event['id'], importedAttendees);
+    try {
+      final response = await api.importAttendees(
+        event['id'],
+        importedAttendees,
+      );
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Imported ${response['imported']} attendees.')),
-    );
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Imported ${response['imported']} attendees.')),
+      );
 
-    await loadAttendees();
+      await loadAttendees();
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
+      );
+    }
   }
 
   Future<void> downloadReport() async {
     final event = widget.event;
     if (event == null) return;
 
-    final rows = await api.getReport(event['id']);
+    try {
+      final rows = await api.getReport(event['id']);
 
-    final csvRows = <List<dynamic>>[
-      [
-        'Seat No.',
-        'Student ID',
-        'Student Name',
-        'College/School',
-        'Program',
-        'College',
-        'Status',
-        'Checked In At',
-      ],
-    ];
+      final csvRows = <List<dynamic>>[
+        [
+          'Seat No.',
+          'Student ID',
+          'Student Name',
+          'College/School',
+          'Program',
+          'College',
+          'Status',
+          'Checked In At',
+        ],
+      ];
 
-    for (final item in rows) {
-      csvRows.add([
-        item['seat_no'] ?? '',
-        item['student_no'] ?? '',
-        item['full_name'] ?? '',
-        item['college_school'] ?? '',
-        item['program'] ?? '',
-        item['college'] ?? '',
-        item['status'] ?? '',
-        item['checked_in_at'] ?? '',
-      ]);
+      for (final item in rows) {
+        csvRows.add([
+          item['seat_no'] ?? '',
+          item['student_no'] ?? '',
+          item['full_name'] ?? '',
+          item['college_school'] ?? '',
+          item['program'] ?? '',
+          item['college'] ?? '',
+          item['status'] ?? '',
+          item['checked_in_at'] ?? '',
+        ]);
+      }
+
+      final csv = const ListToCsvConverter().convert(csvRows);
+      final bytes = utf8.encode(csv);
+      final blob = html.Blob([bytes], 'text/csv');
+      final url = html.Url.createObjectUrlFromBlob(blob);
+
+      html.AnchorElement(href: url)
+        ..setAttribute('download', 'attendance_report_event_${event['id']}.csv')
+        ..click();
+
+      html.Url.revokeObjectUrl(url);
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
+      );
     }
-
-    final csv = const ListToCsvConverter().convert(csvRows);
-    final bytes = utf8.encode(csv);
-    final blob = html.Blob([bytes], 'text/csv');
-    final url = html.Url.createObjectUrlFromBlob(blob);
-
-    html.AnchorElement(href: url)
-      ..setAttribute('download', 'attendance_report_event_${event['id']}.csv')
-      ..click();
-
-    html.Url.revokeObjectUrl(url);
   }
 
   @override
@@ -710,7 +539,6 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
             ),
           ),
           const SizedBox(height: 20),
-
           Row(
             children: [
               _DashboardCard(
@@ -732,9 +560,7 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
               ),
             ],
           ),
-
           const SizedBox(height: 20),
-
           Center(
             child: Card(
               elevation: 0,
@@ -789,9 +615,7 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
               ),
             ),
           ),
-
           const SizedBox(height: 20),
-
           Expanded(
             child: loading
                 ? const Center(child: CircularProgressIndicator())
@@ -836,6 +660,128 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                     },
                   ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class AdminShell extends StatefulWidget {
+  const AdminShell({super.key});
+
+  @override
+  State<AdminShell> createState() => _AdminShellState();
+}
+
+class _AdminShellState extends State<AdminShell> {
+  int selectedIndex = 0;
+  Map<String, dynamic>? selectedEvent;
+
+  void openEvent(Map<String, dynamic> event) {
+    setState(() {
+      selectedEvent = event;
+      selectedIndex = 2;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final pages = [
+      DashboardPage(
+        onOpenEvents: () {
+          setState(() {
+            selectedIndex = 1;
+          });
+        },
+      ),
+
+      EventsPage(onOpenEvent: openEvent),
+
+      EventDetailsPage(event: selectedEvent),
+
+      const StudentRegistrationPage(),
+    ];
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
+      body: Row(
+        children: [
+          Container(
+            width: 260,
+            color: const Color(0xFF0F172A),
+            child: SafeArea(
+              child: Column(
+                children: [
+                  const SizedBox(height: 30),
+
+                  const Icon(
+                    Icons.event_available,
+                    color: Colors.white,
+                    size: 48,
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  const Text(
+                    'Smart Attendance',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+
+                  const SizedBox(height: 30),
+
+                  _NavTile(
+                    icon: Icons.dashboard,
+                    label: 'Dashboard',
+                    selected: selectedIndex == 0,
+                    onTap: () {
+                      setState(() {
+                        selectedIndex = 0;
+                      });
+                    },
+                  ),
+
+                  _NavTile(
+                    icon: Icons.event,
+                    label: 'Events',
+                    selected: selectedIndex == 1,
+                    onTap: () {
+                      setState(() {
+                        selectedIndex = 1;
+                      });
+                    },
+                  ),
+
+                  _NavTile(
+                    icon: Icons.people,
+                    label: 'Event Details',
+                    selected: selectedIndex == 2,
+                    onTap: () {
+                      setState(() {
+                        selectedIndex = 2;
+                      });
+                    },
+                  ),
+
+                  _NavTile(
+                    icon: Icons.qr_code,
+                    label: 'Student Registration',
+                    selected: selectedIndex == 3,
+                    onTap: () {
+                      setState(() {
+                        selectedIndex = 3;
+                      });
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          Expanded(child: pages[selectedIndex]),
         ],
       ),
     );
