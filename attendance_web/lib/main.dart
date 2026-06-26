@@ -741,6 +741,7 @@ class StudentRegistrationPage extends StatefulWidget {
 
 class _StudentRegistrationPageState extends State<StudentRegistrationPage> {
   final api = ApiService();
+
   final eventIdController = TextEditingController(
     text: Uri.base.queryParameters['eventId'] ?? '1',
   );
@@ -782,89 +783,105 @@ class _StudentRegistrationPageState extends State<StudentRegistrationPage> {
 
   @override
   Widget build(BuildContext context) {
-    return _PageScaffold(
-      title: 'Student Registration',
-      subtitle:
-          'Students scan QR, enter student number, and get attendance confirmation.',
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 520),
-          child: result == null
-              ? Card(
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(26),
-                    side: const BorderSide(color: Color(0xFFE2E8F0)),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(28),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.qr_code_2,
-                          size: 64,
-                          color: Color(0xFF2563EB),
-                        ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Register Attendance',
-                          style: TextStyle(
-                            fontSize: 26,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'Enter your event ID and student number.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: Color(0xFF64748B)),
-                        ),
-                        const SizedBox(height: 24),
-                        _Input(
-                          controller: eventIdController,
-                          label: 'Event ID',
-                        ),
-                        _Input(
-                          controller: studentNoController,
-                          label: 'Student Number',
-                        ),
-                        if (errorMessage != null) ...[
-                          const SizedBox(height: 12),
-                          Text(
-                            errorMessage!,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              color: Colors.red,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                        const SizedBox(height: 18),
-                        SizedBox(
-                          width: double.infinity,
-                          height: 52,
-                          child: ElevatedButton.icon(
-                            onPressed: loading ? null : register,
-                            icon: loading
-                                ? const SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : const Icon(Icons.login),
-                            label: Text(
-                              loading ? 'Registering...' : 'Register',
-                            ),
-                          ),
-                        ),
-                      ],
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 520),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Student Registration',
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xFF0F172A),
                     ),
                   ),
-                )
-              : _SuccessCard(data: result!, onReset: reset),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Enter your student number to confirm your attendance.',
+                    style: TextStyle(color: Color(0xFF64748B), fontSize: 16),
+                  ),
+                  const SizedBox(height: 24),
+                  result == null
+                      ? Card(
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(26),
+                            side: const BorderSide(color: Color(0xFFE2E8F0)),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.qr_code_2,
+                                  size: 56,
+                                  color: Color(0xFF2563EB),
+                                ),
+                                const SizedBox(height: 14),
+                                const Text(
+                                  'Register Attendance',
+                                  style: TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                                const SizedBox(height: 20),
+                                _Input(
+                                  controller: eventIdController,
+                                  label: 'Event ID',
+                                ),
+                                _Input(
+                                  controller: studentNoController,
+                                  label: 'Student Number',
+                                ),
+                                if (errorMessage != null) ...[
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    errorMessage!,
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                      color: Colors.red,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                                const SizedBox(height: 18),
+                                SizedBox(
+                                  width: double.infinity,
+                                  height: 52,
+                                  child: ElevatedButton.icon(
+                                    onPressed: loading ? null : register,
+                                    icon: loading
+                                        ? const SizedBox(
+                                            width: 18,
+                                            height: 18,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                            ),
+                                          )
+                                        : const Icon(Icons.login),
+                                    label: Text(
+                                      loading ? 'Registering...' : 'Register',
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      : _SuccessCard(data: result!, onReset: reset),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );
