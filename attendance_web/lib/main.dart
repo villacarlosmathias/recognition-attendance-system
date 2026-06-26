@@ -527,6 +527,9 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
       );
     }
 
+    final registrationLink =
+        'https://recognition-attendance-system.onrender.com/?eventId=${event['id']}';
+
     final checkedIn = attendees
         .where((a) => a['status'] == 'Checked In')
         .length;
@@ -568,12 +571,13 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
           Center(
             child: Card(
               elevation: 0,
+              color: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(22),
                 side: const BorderSide(color: Color(0xFFE2E8F0)),
               ),
               child: Padding(
-                padding: const EdgeInsets.all(22),
+                padding: const EdgeInsets.all(32),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -584,16 +588,26 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                         fontWeight: FontWeight.w900,
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    QrImageView(
-                      data:
-                          'https://recognition-attendance-system.onrender.com/?eventId=${event['id']}',
-                      version: QrVersions.auto,
-                      size: 220,
+                    const SizedBox(height: 20),
+                    Container(
+                      color: Colors.white,
+                      padding: const EdgeInsets.all(24),
+                      child: QrImageView(
+                        data: registrationLink,
+                        version: QrVersions.auto,
+                        size: 320,
+                        backgroundColor: Colors.white,
+                        errorCorrectionLevel: QrErrorCorrectLevel.H,
+                      ),
                     ),
+                    const SizedBox(height: 16),
                     SelectableText(
-                      'https://recognition-attendance-system.onrender.com/?eventId=${event['id']}',
+                      registrationLink,
                       textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Color(0xFF2563EB),
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     Text(
