@@ -1188,31 +1188,20 @@ class _PageScaffold extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: const TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.w900,
-                          color: Color(0xFF0F172A),
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        subtitle,
-                        style: const TextStyle(color: Color(0xFF64748B)),
-                      ),
-                    ],
-                  ),
-                ),
-                if (action != null) action!,
-              ],
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 32,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFF0F172A),
+              ),
             ),
+            const SizedBox(height: 6),
+            Text(subtitle, style: const TextStyle(color: Color(0xFF64748B))),
+            if (action != null) ...[
+              const SizedBox(height: 16),
+              Align(alignment: Alignment.centerLeft, child: action!),
+            ],
             const SizedBox(height: 26),
             Expanded(child: child),
           ],
