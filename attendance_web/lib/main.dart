@@ -597,6 +597,14 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
       });
     }
 
+    if (importedAttendees.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No valid students found in Excel file.')),
+      );
+      return;
+    }
+
     final response = await api.importAttendees(event['id'], importedAttendees);
 
     if (!mounted) return;
@@ -684,27 +692,11 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
             icon: const Icon(Icons.person_add),
             label: const Text('Add Student'),
           ),
-
           ElevatedButton.icon(
             onPressed: importExcel,
             icon: const Icon(Icons.upload_file),
             label: const Text('Import Excel'),
           ),
-
-          ElevatedButton.icon(
-            onPressed: downloadReport,
-            icon: const Icon(Icons.download),
-            label: const Text('Download Report'),
-          ),
-        ],
-      ),
-          const SizedBox(width: 10),
-          ElevatedButton.icon(
-            onPressed: importExcel,
-            icon: const Icon(Icons.upload_file),
-            label: const Text('Import Excel'),
-          ),
-          const SizedBox(width: 10),
           ElevatedButton.icon(
             onPressed: downloadReport,
             icon: const Icon(Icons.download),
@@ -800,6 +792,7 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                         const SizedBox(height: 10),
                     itemBuilder: (context, index) {
                       final attendee = attendees[index];
+
                       final seatText = attendee['group_name'] != null
                           ? '${attendee['group_name']} - Seat ${attendee['group_seat_no']}'
                           : attendee['seat_no'] == null
