@@ -19,7 +19,9 @@ class EventAttendanceApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasEventId = Uri.base.queryParameters.containsKey('eventId');
+    final params = Uri.base.queryParameters;
+    final hasEventId = params.containsKey('eventId');
+    final forceAdmin = params['admin'] == 'true';
 
     return MaterialApp(
       title: 'Event Smart Attendance',
@@ -29,7 +31,9 @@ class EventAttendanceApp extends StatelessWidget {
         textTheme: GoogleFonts.interTextTheme(),
         colorSchemeSeed: const Color(0xFF2563EB),
       ),
-      home: hasEventId ? const StudentRegistrationPage() : const AdminShell(),
+      home: hasEventId && !forceAdmin
+          ? const StudentRegistrationPage()
+          : const AdminShell(),
     );
   }
 }
